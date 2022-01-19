@@ -55,7 +55,7 @@ class ContactListContactsStream(EmarsysStream):
     ignore_parent_replication_keys = True
     path = "/contactlist/{contact_list_id}/contacts/data"
     primary_keys = ["id"]
-    records_jsonpath = "$.data[*].fields"
+    records_jsonpath = "$.data[*]..fields"
     next_page_token_jsonpath = None
 
     schema = th.PropertiesList(
