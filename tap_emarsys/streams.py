@@ -186,3 +186,90 @@ class EmailCategoriesStream(EmarsysStream):
         th.Property("id", th.NumberType),
         th.Property("category", th.StringType),
     ).to_dict()
+
+    
+class EmailResponseSummariesStream(EmarsysStream):
+    name = "email_response_summaries"
+    parent_stream_type = EmailCampaignsStream
+    ignore_parent_replication_keys = True
+    path = "/email/{email_campaign_id}/responsesummary/"
+    primary_keys = ["email_campaign_id", "date"]
+    replication_key = "date"
+    next_page_token_jsonpath = None
+    records_jsonpath = "$.data"
+
+    schema = th.PropertiesList(
+        th.Property("email_campaign_id", th.NumberType),
+        th.Property("date", th.DateTimeType),
+        th.Property("sent", th.NumberType),
+        th.Property("planned", th.NumberType),
+        th.Property("soft_bounces", th.NumberType),
+        th.Property("hard_bounces", th.NumberType),
+        th.Property("block_bounces", th.NumberType),
+        th.Property("opened", th.NumberType),
+        th.Property("unsubscribe", th.NumberType),
+        th.Property("total_clicks", th.NumberType),
+        th.Property("unique_clicks", th.NumberType),
+        th.Property("complained", th.NumberType),
+        th.Property("launches", th.NumberType),
+    ).to_dict()
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        if isinstance(next_page_token, datetime.datetime):
+            start_date = next_page_token
+        else:
+            start_date = datetime.datetime.strptime(context["email_created_at"], "%Y-%m-%d %H:%M:%S")
+        deleted_date = datetime.datetime.strptime(context["email_deleted_at"], "%Y-%m-%d %H:%M:%S") if context["email_deleted_at"] else None
+        today = datetime.datetime.now(tz=start_date.tzinfo)
+        final_date = deleted_date if deleted_date else today
+        params = {
+            'start_date': start_date.strftime('%Y-%m-%d'),
+            'end_date': (
+                min(start_date + datetime.timedelta(days=1), final_date)
+            ).strftime('%Y-%m-%d'),
+        }
+        context["start_date"] = start_date.strftime('%Y-%m-%d')
+        self.logger.debug(params)
+        return params
+
+    def get_next_page_token(
+        self, response: requests.Response, previous_token: Optional[Any]
+    ) -> Optional[Any]:
+        """Return a token for identifying next page or None if no more pages."""
+        if self.next_page_token_jsonpath:
+            all_matches = extract_jsonpath(
+                self.next_page_token_jsonpath, response.json()
+            )
+            first_match = next(iter(all_matches), None)
+            next_page_token = first_match
+        elif response.headers.get("X-Next-Page", None):
+            next_page_token = response.headers.get("X-Next-Page", None)
+        else:
+            start_date = datetime.datetime.strptime(
+                parse_qs(urlparse(response.request.url).query)["start_date"][0],
+                "%Y-%m-%d"
+            )
+            end_date = datetime.datetime.strptime(
+                parse_qs(urlparse(response.request.url).query)["end_date"][0],
+                "%Y-%m-%d"
+            )
+            if start_date.date() < end_date.date():
+                next_page_token = end_date
+            else:
+                next_page_token = None
+        return next_page_token
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        row["date"] = context["start_date"]
+        return row
+
+    def get_records(self, context: Optional[dict] = None) -> Iterable[Dict[str, Any]]:
+        """Return a generator of row-type dictionary objects.
+        Each row emitted should be a dictionary of property names to their values.
+        """
+        if context["email_status"] == '1':
+            self.logger.debug("Skipping campaign {campaign_id} sync.".format(campaign_id=context["email_campaign_id"]))
+            return []
+        return super().get_records(context)
