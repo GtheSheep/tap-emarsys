@@ -177,7 +177,10 @@ class EmailCampaignsStream(EmarsysStream):
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         """Return a context dictionary for child streams."""
         return {
-            "email_campaign_id": record["id"]
+            "email_campaign_id": record["id"],
+            "email_created_at": record["created"],
+            "email_deleted_at": record["deleted"],
+            "email_status": record["status"],
         }
 
 
