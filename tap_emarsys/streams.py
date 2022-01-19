@@ -1,9 +1,14 @@
 """Stream type classes for tap-emarsys."""
 
+import datetime
+from urllib.parse import urlparse
+from urllib.parse import parse_qs
 from pathlib import Path
 from typing import Any, Dict, Optional, Union, List, Iterable
 
+import requests
 from singer_sdk import typing as th  # JSON Schema typing helpers
+from singer_sdk.helpers.jsonpath import extract_jsonpath
 
 from tap_emarsys.client import EmarsysStream
 
