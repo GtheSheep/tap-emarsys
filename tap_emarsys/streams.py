@@ -59,7 +59,7 @@ class ContactListContactsStream(EmarsysStream):
     parent_stream_type = ContactListsStream
     ignore_parent_replication_keys = True
     path = "/contactlist/{contact_list_id}/contacts/data"
-    primary_keys = ["id"]
+    primary_keys = []
     records_jsonpath = "$.data[*]..fields"
     next_page_token_jsonpath = None
 
@@ -79,7 +79,7 @@ class ContactFieldsStream(EmarsysStream):
     parent_stream_type = FieldsStream
     ignore_parent_replication_keys = True
     path = "/contact/query/?return={field_id}"
-    primary_keys = ["id"]
+    primary_keys = []
     records_jsonpath = "$.data.result[*]"
     next_page_token_jsonpath = None
     replication_key = None
