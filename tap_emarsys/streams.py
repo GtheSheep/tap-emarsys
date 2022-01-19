@@ -90,7 +90,6 @@ class SegmentStream(EmarsysStream):
     path = "/filter/{segment_id}"
     primary_keys = ["id"]
     next_page_token_jsonpath = None
-    records_jsonpath = "$."
 
     schema = th.PropertiesList(
         th.Property("id", th.NumberType),
