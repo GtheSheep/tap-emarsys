@@ -64,6 +64,30 @@ class ContactListContactsStream(EmarsysStream):
         th.Property("contact_list_id", th.NumberType),
     ).to_dict()
 
+    
+class ContactFieldsStream(EmarsysStream):
+    name = "contact_fields"
+    parent_stream_type = FieldsStream
+    ignore_parent_replication_keys = True
+    path = "/contact/query/?return={field_id}"
+    primary_keys = ["id"]
+    records_jsonpath = "$.data.result[*]"
+    next_page_token_jsonpath = None
+    replication_key = None
+
+    schema = th.PropertiesList(
+        th.Property("id", th.NumberType, description="Contact Identifier"),
+        th.Property("field_id", th.NumberType),
+        th.Property("value", th.StringType),
+    ).to_dict()
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        return {
+            "id": row["id"],
+            "field_id": context["field_id"],
+            "value": row[str(context["field_id"])]
+        }
+
 
 class SegmentIdsStream(EmarsysStream):
     name = "segment_ids"
