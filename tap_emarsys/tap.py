@@ -10,7 +10,7 @@ from tap_emarsys.streams import (
     ContactListsStream,
     ContactListContactsStream,
     SegmentIdsStream,
-    # SegmentStream,
+    SegmentStream,
     EmailCampaignsStream,
     EmailCategoriesStream,
 )
@@ -20,7 +20,7 @@ STREAM_TYPES = [
     ContactListsStream,
     ContactListContactsStream,
     SegmentIdsStream,
-    # SegmentStream,
+    SegmentStream,
     EmailCampaignsStream,
     EmailCategoriesStream,
 ]
