@@ -59,10 +59,14 @@ class ContactListContactsStream(EmarsysStream):
     next_page_token_jsonpath = None
 
     schema = th.PropertiesList(
-        th.Property("id", th.NumberType),
+        th.Property("contact_id", th.NumberType),
         th.Property("uid", th.StringType),
         th.Property("contact_list_id", th.NumberType),
     ).to_dict()
+    
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        row["contact_id"] = row["id"]
+        return row
 
     
 class ContactFieldsStream(EmarsysStream):
@@ -76,15 +80,17 @@ class ContactFieldsStream(EmarsysStream):
     replication_key = None
 
     schema = th.PropertiesList(
-        th.Property("id", th.NumberType, description="Contact Identifier"),
+        th.Property("contact_id", th.NumberType),
         th.Property("field_id", th.NumberType),
+        th.Property("field_string_id", th.StringType),
         th.Property("value", th.StringType),
     ).to_dict()
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         return {
-            "id": row["id"],
+            "contact_id": row["id"],
             "field_id": context["field_id"],
+            "field_string_id": context["field_string_id"],
             "value": row[str(context["field_id"])]
         }
 
