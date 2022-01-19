@@ -110,7 +110,7 @@ class EmailCampaignsStream(EmarsysStream):
 
     schema = th.PropertiesList(
         th.Property("id", th.NumberType),
-        th.Property("language", th.NumberType),
+        th.Property("language", th.StringType),
         th.Property("created", th.DateTimeType),
         th.Property("deleted", th.DateTimeType),
         th.Property("fromemail", th.StringType),
