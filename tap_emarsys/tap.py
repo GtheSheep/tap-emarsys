@@ -7,6 +7,7 @@ from singer_sdk import typing as th  # JSON schema typing helpers
 
 from tap_emarsys.streams import (
     FieldsStream,
+    ContactFieldsStream,
     ContactListsStream,
     ContactListContactsStream,
     SegmentIdsStream,
@@ -17,6 +18,7 @@ from tap_emarsys.streams import (
 
 STREAM_TYPES = [
     FieldsStream,
+    ContactFieldsStream,
     ContactListsStream,
     ContactListContactsStream,
     SegmentIdsStream,
