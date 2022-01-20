@@ -281,3 +281,47 @@ class EmailResponseSummariesStream(EmarsysStream):
             self.logger.debug("Skipping campaign {campaign_id} sync.".format(campaign_id=context["email_campaign_id"]))
             return []
         return super().get_records(context)
+
+    def validate_response(self, response: requests.Response) -> None:
+        """Validate HTTP response.
+
+        By default, checks for error status codes (>400) and raises a
+        :class:`singer_sdk.exceptions.FatalAPIError`.
+
+        Tap developers are encouraged to override this method if their APIs use HTTP
+        status codes in non-conventional ways, or if they communicate errors
+        differently (e.g. in the response body).
+
+        .. image:: ../images/200.png
+
+
+        In case an error is deemed transient and can be safely retried, then this
+        method should raise an :class:`singer_sdk.exceptions.RetriableAPIError`.
+
+        Args:
+            response: A `requests.Response`_ object.
+
+        Raises:
+            FatalAPIError: If the request is not retriable.
+            RetriableAPIError: If the request is retriable.
+
+        .. _requests.Response:
+            https://docs.python-requests.org/en/latest/api/#requests.Response
+        """
+        from singer_sdk.exceptions import FatalAPIError, RetriableAPIError
+        if 400 <= response.status_code < 500:
+            print(response.json()['replyCode'])
+            print(response.request.url)
+            print(response.request.path_url)
+            msg = (
+                f"{response.status_code} Client Error: "
+                f"{response.reason} for path: {self.path}"
+            )
+            raise FatalAPIError(msg)
+
+        elif 500 <= response.status_code < 600:
+            msg = (
+                f"{response.status_code} Server Error: "
+                f"{response.reason} for path: {self.path}"
+            )
+            raise RetriableAPIError(msg)
