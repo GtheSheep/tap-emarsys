@@ -309,8 +309,19 @@ class EmailResponseSummariesStream(EmarsysStream):
             https://docs.python-requests.org/en/latest/api/#requests.Response
         """
         from singer_sdk.exceptions import FatalAPIError, RetriableAPIError
-        if 400 <= response.status_code < 500:
-            print(response.json()['replyCode'])
+        if response.status_code == 401 and response.json()['replyText'].startswith('Unauthorized Time frame'):
+            print(response.content)
+            print(response.json())
+            print(response.json().get('replyCode'))
+            print(response.request.url)
+            print(response.request.path_url)
+            msg = (
+                f"{response.status_code} Client Error: "
+                f"{response.reason} for path: {self.path}"
+            )
+            raise RetriableAPIError(msg)
+        elif 400 <= response.status_code < 500:
+            print(response.json().get('replyCode'))
             print(response.request.url)
             print(response.request.path_url)
             msg = (
