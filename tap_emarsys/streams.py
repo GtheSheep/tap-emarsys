@@ -277,7 +277,7 @@ class EmailResponseSummariesStream(EmarsysStream):
         """Return a generator of row-type dictionary objects.
         Each row emitted should be a dictionary of property names to their values.
         """
-        if context["email_status"] == '1':
+        if context["email_status"] in ('1', '4'):
             self.logger.debug("Skipping campaign {campaign_id} sync.".format(campaign_id=context["email_campaign_id"]))
             return []
         return super().get_records(context)
