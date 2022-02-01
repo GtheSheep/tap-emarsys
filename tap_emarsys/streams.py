@@ -104,7 +104,7 @@ class ContactFieldsStream(EmarsysStream):
     ) -> Optional[dict]:
         params = {
             'limit': 10000,
-            'offset': next_page_token
+            'offset': next_page_token if next_page_token else 0
         }
         self.logger.debug(params)
         return params
@@ -122,6 +122,7 @@ class ContactFieldsStream(EmarsysStream):
         elif response.headers.get("X-Next-Page", None):
             next_page_token = response.headers.get("X-Next-Page", None)
         else:
+            print(response.request.url)
             offset = int(parse_qs(urlparse(response.request.url).query)["offset"][0])
             if len(response.json()["data"]["result"]) > 0:
                 next_page_token += 10000
