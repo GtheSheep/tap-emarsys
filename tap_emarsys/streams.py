@@ -99,6 +99,37 @@ class ContactFieldsStream(EmarsysStream):
             "value": row[str(context["field_id"])]
         }
 
+    
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        params = {
+            'limit': 10000,
+            'offset': next_page_token
+        }
+        self.logger.debug(params)
+        return params
+
+    def get_next_page_token(
+        self, response: requests.Response, previous_token: Optional[Any]
+    ) -> Optional[Any]:
+        """Return a token for identifying next page or None if no more pages."""
+        if self.next_page_token_jsonpath:
+            all_matches = extract_jsonpath(
+                self.next_page_token_jsonpath, response.json()
+            )
+            first_match = next(iter(all_matches), None)
+            next_page_token = first_match
+        elif response.headers.get("X-Next-Page", None):
+            next_page_token = response.headers.get("X-Next-Page", None)
+        else:
+            offset = int(parse_qs(urlparse(response.request.url).query)["offset"][0])
+            if len(response.json()["data"]["result"] > 0:
+                next_page_token += 10000
+            else:
+                next_page_token = None
+        return next_page_token
+
 
 class SegmentIdsStream(EmarsysStream):
     name = "segment_ids"
