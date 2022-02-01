@@ -98,7 +98,6 @@ class ContactFieldsStream(EmarsysStream):
             "field_string_id": context["field_string_id"],
             "value": row[str(context["field_id"])]
         }
-
     
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -124,7 +123,7 @@ class ContactFieldsStream(EmarsysStream):
             next_page_token = response.headers.get("X-Next-Page", None)
         else:
             offset = int(parse_qs(urlparse(response.request.url).query)["offset"][0])
-            if len(response.json()["data"]["result"] > 0:
+            if len(response.json()["data"]["result"]) > 0:
                 next_page_token += 10000
             else:
                 next_page_token = None
