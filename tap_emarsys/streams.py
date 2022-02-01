@@ -125,7 +125,7 @@ class ContactFieldsStream(EmarsysStream):
             print(response.request.url)
             offset = int(parse_qs(urlparse(response.request.url).query)["offset"][0])
             if len(response.json()["data"]["result"]) > 0:
-                next_page_token += 10000
+                next_page_token = offset + 10000
             else:
                 next_page_token = None
         return next_page_token
