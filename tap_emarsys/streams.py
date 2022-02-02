@@ -104,7 +104,8 @@ class ContactFieldsStream(EmarsysStream):
     ) -> Optional[dict]:
         params = {
             'limit': 10000,
-            'offset': next_page_token if next_page_token else 0
+            'offset': next_page_token if next_page_token else 0,
+            'excludeempty': True
         }
         self.logger.debug(params)
         return params
