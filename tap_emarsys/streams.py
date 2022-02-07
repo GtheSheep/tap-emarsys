@@ -342,10 +342,10 @@ class EmailResponseSummariesStream(EmarsysStream):
         from singer_sdk.exceptions import FatalAPIError, RetriableAPIError
         if response.status_code == 401:
             print(response.content)
-            print(response.json())
-            print(response.json().get('replyCode'))
-            print(response.request.url)
-            print(response.request.path_url)
+#             print(response.json())
+#             print(response.json().get('replyCode'))
+#             print(response.request.url)
+#             print(response.request.path_url)
             msg = (
                 f"{response.status_code} Client Error: "
                 f"{response.reason} for path: {self.path}"
@@ -353,9 +353,9 @@ class EmailResponseSummariesStream(EmarsysStream):
             self._requests_session = requests.Session()
             raise RetriableAPIError(msg)
         elif 400 <= response.status_code < 500:
-            print(response.json().get('replyCode'))
-            print(response.request.url)
-            print(response.request.path_url)
+#             print(response.json().get('replyCode'))
+#             print(response.request.url)
+#             print(response.request.path_url)
             msg = (
                 f"{response.status_code} Client Error: "
                 f"{response.reason} for path: {self.path}"
