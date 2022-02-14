@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional, Union, List, Iterable
 import requests
 from singer_sdk import typing as th  # JSON Schema typing helpers
 from singer_sdk.helpers.jsonpath import extract_jsonpath
+from singer_sdk.exceptions import FatalAPIError, RetriableAPIError
 
 from tap_emarsys.client import EmarsysStream
 
@@ -339,7 +340,6 @@ class EmailResponseSummariesStream(EmarsysStream):
         .. _requests.Response:
             https://docs.python-requests.org/en/latest/api/#requests.Response
         """
-        from singer_sdk.exceptions import FatalAPIError, RetriableAPIError
         if response.status_code == 401:
             print(response.content)
             print(response.request.url)
@@ -388,10 +388,15 @@ class EmailResponseSummariesStream(EmarsysStream):
             prepared_request = self.prepare_request(
                 context, next_page_token=next_page_token
             )
-            resp = decorated_request(prepared_request, context)
-            if resp.status_code == 401:
-                print("Moo")
-                return self.request_records(context=context)
+            try:
+                resp = decorated_request(prepared_request, context)
+            except RetriableAPIError as e:
+                print(e)
+                if resp.status_code == 401:
+                    print("Moo")
+                    return self.request_records(context=context)
+                else:
+                    raise e
             for row in self.parse_response(resp):
                 yield row
             previous_token = copy.deepcopy(next_page_token)
