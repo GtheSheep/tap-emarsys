@@ -216,6 +216,21 @@ class EmailCampaignsStream(EmarsysStream):
         }
 
 
+class EmailCampaignDetailsStream(EmarsysStream):
+    name = "email_campaign_details"
+    parent_stream_type = EmailCampaignsStream
+    ignore_parent_replication_keys = True
+    path = "/email/{email_campaign_id}/"
+    primary_keys = ["email_campaign_id"]
+    next_page_token_jsonpath = None
+    records_jsonpath = "$.data"
+
+    schema = th.PropertiesList(
+        th.Property("id", th.NumberType),
+        th.Property("additional_linktracking_parameters", th.StringType),
+    ).to_dict()
+
+
 class EmailCategoriesStream(EmarsysStream):
     name = "email_categories"
     path = "/emailcategory"
