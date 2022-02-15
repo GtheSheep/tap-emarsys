@@ -221,7 +221,7 @@ class EmailCampaignDetailsStream(EmarsysStream):
     parent_stream_type = EmailCampaignsStream
     ignore_parent_replication_keys = True
     path = "/email/{email_campaign_id}/"
-    primary_keys = ["email_campaign_id"]
+    primary_keys = ["id"]
     next_page_token_jsonpath = None
     records_jsonpath = "$.data"
 
