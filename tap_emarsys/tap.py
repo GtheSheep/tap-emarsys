@@ -13,6 +13,7 @@ from tap_emarsys.streams import (
     SegmentIdsStream,
     SegmentStream,
     EmailCampaignsStream,
+    EmailCampaignDetailsStream,
     EmailCategoriesStream,
     EmailResponseSummariesStream,
 )
@@ -25,6 +26,7 @@ STREAM_TYPES = [
     SegmentIdsStream,
     SegmentStream,
     EmailCampaignsStream,
+    EmailCampaignDetailsStream,
     EmailCategoriesStream,
     EmailResponseSummariesStream,
 ]
