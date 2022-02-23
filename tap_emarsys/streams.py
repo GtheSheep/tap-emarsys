@@ -433,13 +433,14 @@ class EmailCampaignTrackedLinksStream(EmarsysStream):
     parent_stream_type = EmailCampaignsStream
     ignore_parent_replication_keys = True
     path = "/email/{email_campaign_id}/trackedlinks/"
-    primary_keys = ["id"]
+    primary_keys = ["email_campaign_id", "id"]
     next_page_token_jsonpath = None
-    records_jsonpath = "$.data"
+    records_jsonpath = "$.data[*]"
 
     schema = th.PropertiesList(
         th.Property("id", th.NumberType),
         th.Property("section_id", th.NumberType),
+        th.Property("email_campaign_id", th.NumberType),
         th.Property("url", th.StringType),
         th.Property("tracked_url", th.StringType),
     ).to_dict()
