@@ -54,6 +54,7 @@ class ContactListsStream(EmarsysStream):
             "contact_list_id": record["id"]
         }
 
+
 # TODO: Can this also take fields?
 class ContactListContactsStream(EmarsysStream):
     name = "contact_list_contacts"
@@ -425,3 +426,20 @@ class EmailResponseSummariesStream(EmarsysStream):
                 )
             # Cycle until get_next_page_token() no longer returns a value
             finished = not next_page_token
+
+
+class EmailCampaignTrackedLinksStream(EmarsysStream):
+    name = "email_campaign_tracked_links"
+    parent_stream_type = EmailCampaignsStream
+    ignore_parent_replication_keys = True
+    path = "/email/{email_campaign_id}/trackedlinks/"
+    primary_keys = ["id"]
+    next_page_token_jsonpath = None
+    records_jsonpath = "$.data"
+
+    schema = th.PropertiesList(
+        th.Property("id", th.NumberType),
+        th.Property("section_id", th.NumberType),
+        th.Property("url", th.StringType),
+        th.Property("tracked_url", th.StringType),
+    ).to_dict()
