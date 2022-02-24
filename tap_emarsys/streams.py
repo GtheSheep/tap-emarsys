@@ -183,8 +183,8 @@ class EmailCampaignsStream(EmarsysStream):
         th.Property("fromemail", th.StringType),
         th.Property("name", th.StringType),
         th.Property("status", th.StringType),
-        th.Property("api_status", th.StringType),
-        th.Property("api_error", th.StringType),
+        th.Property("api_status", th.NumberType),
+        th.Property("api_error", th.NumberType),
         th.Property("event_id", th.StringType),
         th.Property("is_delayed", th.NumberType),
         th.Property("administrator_id", th.StringType),
@@ -193,10 +193,10 @@ class EmailCampaignsStream(EmarsysStream):
         th.Property("fromname", th.StringType),
         th.Property("subject", th.StringType),
         th.Property("email_category", th.StringType),
-        th.Property("filter", th.StringType),
-        th.Property("exclude_filter", th.StringType),
+        th.Property("filter", th.NumberType),
+        th.Property("exclude_filter", th.NumberType),
         th.Property("contactlist", th.StringType),
-        th.Property("exclude_contactlist", th.StringType),
+        th.Property("exclude_contactlist", th.NumberType),
         th.Property("template", th.StringType),
         th.Property("unsubscribe", th.StringType),
         th.Property("browse", th.StringType),
@@ -215,6 +215,14 @@ class EmailCampaignsStream(EmarsysStream):
             "email_deleted_at": record["deleted"],
             "email_status": record["status"],
         }
+    
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        row["id"] = int(row["id"])
+        row["filter"] = int(row["filter"])
+        row["exclude_filter"] = int(row["exclude_filter"])
+        row["api_error"] = int(row["api_error"])
+        row["api_status"] = int(row["api_status"])
+        return row
 
 
 class EmailCampaignDetailsStream(EmarsysStream):
@@ -224,7 +232,7 @@ class EmailCampaignDetailsStream(EmarsysStream):
     path = "/email/{email_campaign_id}/"
     primary_keys = ["id"]
     next_page_token_jsonpath = None
-    records_jsonpath = "$.data"
+    records_jsonpath = "$.data[*]"
 
     schema = th.PropertiesList(
         th.Property("id", th.NumberType),
@@ -252,7 +260,7 @@ class EmailResponseSummariesStream(EmarsysStream):
     primary_keys = ["email_campaign_id", "date"]
     replication_key = "date"
     next_page_token_jsonpath = None
-    records_jsonpath = "$.data"
+    records_jsonpath = "$.data[*]"
 
     schema = th.PropertiesList(
         th.Property("email_campaign_id", th.NumberType),
@@ -319,6 +327,18 @@ class EmailResponseSummariesStream(EmarsysStream):
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         row["date"] = context["start_date"]
+        row["email_campaign_id"] = int(context["email_campaign_id"])
+        row["planned"] = int(row["planned"])
+        row["total_clicks"] = int(row["total_clicks"])
+        row["unique_clicks"] = int(row["unique_clicks"])
+        row["sent"] = int(row["sent"])
+        row["soft_bounces"] = int(row["soft_bounces"])
+        row["hard_bounces"] = int(row["hard_bounces"])
+        row["block_bounces"] = int(row["block_bounces"])
+        row["opened"] = int(row["opened"])
+        row["unsubscribe"] = int(row["unsubscribe"])
+        row["complained"] = int(row["complained"])
+        row["launches"] = int(row["launches"])
         return row
 
     def get_records(self, context: Optional[dict] = None) -> Iterable[Dict[str, Any]]:
@@ -360,9 +380,6 @@ class EmailResponseSummariesStream(EmarsysStream):
             print(response.content)
             print(response.request.url)
             print(response.request.headers)
-#             print(response.json())
-#             print(response.json().get('replyCode'))
-#             print(response.request.path_url)
             msg = (
                 f"{response.status_code} Client Error: "
                 f"{response.reason} for path: {self.path}"
@@ -370,9 +387,6 @@ class EmailResponseSummariesStream(EmarsysStream):
             self._requests_session = None
             raise RetriableAPIError(msg)
         elif 400 <= response.status_code < 500:
-#             print(response.json().get('replyCode'))
-#             print(response.request.url)
-#             print(response.request.path_url)
             msg = (
                 f"{response.status_code} Client Error: "
                 f"{response.reason} for path: {self.path}"
@@ -408,11 +422,7 @@ class EmailResponseSummariesStream(EmarsysStream):
                 resp = decorated_request(prepared_request, context)
             except RetriableAPIError as e:
                 print(e)
-                if resp.status_code == 401:
-                    print("Moo")
-                    return self.request_records(context=context)
-                else:
-                    raise e
+                return self.request_records(context=context)
             for row in self.parse_response(resp):
                 yield row
             previous_token = copy.deepcopy(next_page_token)
@@ -426,6 +436,7 @@ class EmailResponseSummariesStream(EmarsysStream):
                 )
             # Cycle until get_next_page_token() no longer returns a value
             finished = not next_page_token
+
 
 
 class EmailCampaignTrackedLinksStream(EmarsysStream):
@@ -475,9 +486,6 @@ class EmailCampaignTrackedLinksStream(EmarsysStream):
             print(response.content)
             print(response.request.url)
             print(response.request.headers)
-#             print(response.json())
-#             print(response.json().get('replyCode'))
-#             print(response.request.path_url)
             msg = (
                 f"{response.status_code} Client Error: "
                 f"{response.reason} for path: {self.path}"
@@ -485,9 +493,6 @@ class EmailCampaignTrackedLinksStream(EmarsysStream):
             self._requests_session = None
             raise RetriableAPIError(msg)
         elif 400 <= response.status_code < 500:
-#             print(response.json().get('replyCode'))
-#             print(response.request.url)
-#             print(response.request.path_url)
             msg = (
                 f"{response.status_code} Client Error: "
                 f"{response.reason} for path: {self.path}"
