@@ -158,6 +158,7 @@ class SegmentStream(EmarsysStream):
     path = "/filter/{segment_id}"
     primary_keys = ["id"]
     next_page_token_jsonpath = None
+    replication_key = None
 
     schema = th.PropertiesList(
         th.Property("id", th.NumberType),
@@ -233,6 +234,7 @@ class EmailCampaignDetailsStream(EmarsysStream):
     primary_keys = ["id"]
     next_page_token_jsonpath = None
     records_jsonpath = "$.data[*]"
+    replication_key = None
 
     schema = th.PropertiesList(
         th.Property("id", th.NumberType),
@@ -446,6 +448,7 @@ class EmailCampaignTrackedLinksStream(EmarsysStream):
     path = "/email/{email_campaign_id}/trackedlinks/"
     primary_keys = ["email_campaign_id", "id"]
     next_page_token_jsonpath = None
+    replication_key = None
     records_jsonpath = "$.data[*]"
 
     schema = th.PropertiesList(
