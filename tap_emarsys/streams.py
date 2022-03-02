@@ -77,7 +77,7 @@ class ContactIdsStream(EmarsysStream):
             next_page_token = response.headers.get("X-Next-Page", None)
         else:
             offset = previous_token or 0
-            if len(response.json()["data"]["result"]) > 0:
+            if len(response.json()["data"]["result"]) == 10000:
                 next_page_token = offset + 10000
             else:
                 next_page_token = None
