@@ -35,6 +35,120 @@ class FieldsStream(EmarsysStream):
         }
 
 
+class ContactIdsStream(EmarsysStream):
+    name = "contact_ids"
+    path = "/contact/query/"
+    primary_keys = ["id"]
+    replication_key = None
+    records_jsonpath = "$.data.result[*]"
+
+    schema = th.PropertiesList(
+        th.Property("id", th.NumberType),
+    ).to_dict()
+
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        """Return a context dictionary for child streams."""
+        return {
+            "contact_id": record["id"]
+        }
+
+    def get_url_params(
+            self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        params = {
+            "limit": 10000,
+            "offset": next_page_token if next_page_token else 0,
+            "return": "3"
+        }
+        self.logger.debug(params)
+        return params
+
+    def get_next_page_token(
+        self, response: requests.Response, previous_token: Optional[Any]
+    ) -> Optional[Any]:
+        """Return a token for identifying next page or None if no more pages."""
+        if self.next_page_token_jsonpath:
+            all_matches = extract_jsonpath(
+                self.next_page_token_jsonpath, response.json()
+            )
+            first_match = next(iter(all_matches), None)
+            next_page_token = first_match
+        elif response.headers.get("X-Next-Page", None):
+            next_page_token = response.headers.get("X-Next-Page", None)
+        else:
+            offset = previous_token or 0
+            if len(response.json()["data"]["result"]) > 0:
+                next_page_token = offset + 10000
+            else:
+                next_page_token = None
+        return next_page_token
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        row["id"] = int(row["id"])
+        return row
+
+
+class ContactFieldsStream(EmarsysStream):
+    name = "contact_fields"
+    rest_method = "POST"
+    parent_stream_type = ContactIdsStream
+    ignore_parent_replication_keys = True
+    path = "/contact/getdata"
+    primary_keys = ["contact_id", "field_id"]
+    next_page_token_jsonpath = None
+    records_jsonpath = "$.data.result[*]"
+
+    schema = th.PropertiesList(
+        th.Property("contact_id", th.NumberType),
+        th.Property("uid", th.StringType),
+        th.Property("field_id", th.NumberType),
+        th.Property("field_value", th.StringType),
+    ).to_dict()
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        new_rows = []
+        for key, value in row.items():
+            if key not in ["id", "uid"]:
+                new_row = dict(contact_id=int(row["id"]), uid=row["uid"])
+                new_row['field_id'] = int(key)
+                new_row['field_value'] = str(value)
+                new_rows.append(new_row)
+        return new_rows
+
+    def prepare_request_payload(
+            self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Optional[dict]:
+        params = {
+            'keyId': 'id',
+            'fields': context['available_field_ids'],
+            'keyValues': [context['contact_id']]
+        }
+        self.logger.debug(params)
+        return params
+
+    def get_records(self, context: Optional[dict]) -> Iterable[Dict[str, Any]]:
+        context = context or {}
+        if context.get('available_fields') is None:
+            headers = self.http_headers
+            authenticator = self.authenticator
+            if authenticator:
+                headers.update(authenticator.auth_headers or {})
+            response = requests.get(
+                url="".join([self.url_base, "/field/translate/" + self.config['language_id'] or ""]),
+                headers=headers,
+            )
+            response.raise_for_status()
+            response_json = response.json()
+            context['available_field_ids'] = [result['id'] for result in response_json['data']]
+        for record in self.request_records(context):
+            transformed_records = self.post_process(record, context)
+            if transformed_records is None or len(transformed_records) == 0:
+                # Record filtered out during post_process()
+                continue
+            for transformed_record in transformed_records:
+                yield transformed_record
+
+
 class ContactListsStream(EmarsysStream):
     name = "contact_lists"
     path = "/contactlist"
@@ -53,7 +167,6 @@ class ContactListsStream(EmarsysStream):
         return {
             "contact_list_id": record["id"]
         }
-
 
 # TODO: Can this also take fields?
 class ContactListContactsStream(EmarsysStream):
@@ -74,63 +187,6 @@ class ContactListContactsStream(EmarsysStream):
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         row["contact_id"] = row["id"]
         return row
-
-    
-class ContactFieldsStream(EmarsysStream):
-    name = "contact_fields"
-    parent_stream_type = FieldsStream
-    ignore_parent_replication_keys = True
-    path = "/contact/query/?return={field_id}"
-    primary_keys = ["contact_id", "field_id"]
-    records_jsonpath = "$.data.result[*]"
-    next_page_token_jsonpath = None
-    replication_key = None
-
-    schema = th.PropertiesList(
-        th.Property("contact_id", th.NumberType),
-        th.Property("field_id", th.NumberType),
-        th.Property("field_string_id", th.StringType),
-        th.Property("value", th.StringType),
-    ).to_dict()
-
-    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
-        return {
-            "contact_id": row["id"],
-            "field_id": context["field_id"],
-            "field_string_id": context["field_string_id"],
-            "value": row[str(context["field_id"])]
-        }
-    
-    def get_url_params(
-        self, context: Optional[dict], next_page_token: Optional[Any]
-    ) -> Optional[dict]:
-        params = {
-            'limit': 10000,
-            'offset': next_page_token if next_page_token else 0,
-            'excludeempty': True
-        }
-        self.logger.debug(params)
-        return params
-
-    def get_next_page_token(
-        self, response: requests.Response, previous_token: Optional[Any]
-    ) -> Optional[Any]:
-        """Return a token for identifying next page or None if no more pages."""
-        if self.next_page_token_jsonpath:
-            all_matches = extract_jsonpath(
-                self.next_page_token_jsonpath, response.json()
-            )
-            first_match = next(iter(all_matches), None)
-            next_page_token = first_match
-        elif response.headers.get("X-Next-Page", None):
-            next_page_token = response.headers.get("X-Next-Page", None)
-        else:
-            offset = int(parse_qs(urlparse(response.request.url).query)["offset"][0])
-            if len(response.json()["data"]["result"]) > 0:
-                next_page_token = offset + 10000
-            else:
-                next_page_token = None
-        return next_page_token
 
 
 class SegmentIdsStream(EmarsysStream):
@@ -158,7 +214,6 @@ class SegmentStream(EmarsysStream):
     path = "/filter/{segment_id}"
     primary_keys = ["id"]
     next_page_token_jsonpath = None
-    replication_key = None
 
     schema = th.PropertiesList(
         th.Property("id", th.NumberType),
@@ -216,7 +271,7 @@ class EmailCampaignsStream(EmarsysStream):
             "email_deleted_at": record["deleted"],
             "email_status": record["status"],
         }
-    
+
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
         row["id"] = int(row["id"])
         row["filter"] = int(row["filter"])
@@ -233,8 +288,7 @@ class EmailCampaignDetailsStream(EmarsysStream):
     path = "/email/{email_campaign_id}/"
     primary_keys = ["id"]
     next_page_token_jsonpath = None
-    records_jsonpath = "$.data[*]"
-    replication_key = None
+    records_jsonpath = "$.data"
 
     schema = th.PropertiesList(
         th.Property("id", th.NumberType),
@@ -379,9 +433,9 @@ class EmailResponseSummariesStream(EmarsysStream):
             https://docs.python-requests.org/en/latest/api/#requests.Response
         """
         if response.status_code == 401:
-            print(response.content)
-            print(response.request.url)
-            print(response.request.headers)
+            # print(response.content)
+            # print(response.request.url)
+            # print(response.request.headers)
             msg = (
                 f"{response.status_code} Client Error: "
                 f"{response.reason} for path: {self.path}"
@@ -440,7 +494,6 @@ class EmailResponseSummariesStream(EmarsysStream):
             finished = not next_page_token
 
 
-
 class EmailCampaignTrackedLinksStream(EmarsysStream):
     name = "email_campaign_tracked_links"
     parent_stream_type = EmailCampaignsStream
@@ -448,7 +501,6 @@ class EmailCampaignTrackedLinksStream(EmarsysStream):
     path = "/email/{email_campaign_id}/trackedlinks/"
     primary_keys = ["email_campaign_id", "id"]
     next_page_token_jsonpath = None
-    replication_key = None
     records_jsonpath = "$.data[*]"
 
     schema = th.PropertiesList(
@@ -458,6 +510,7 @@ class EmailCampaignTrackedLinksStream(EmarsysStream):
         th.Property("url", th.StringType),
         th.Property("tracked_url", th.StringType),
     ).to_dict()
+
 
     def validate_response(self, response: requests.Response) -> None:
         """Validate HTTP response.
@@ -486,9 +539,6 @@ class EmailCampaignTrackedLinksStream(EmarsysStream):
             https://docs.python-requests.org/en/latest/api/#requests.Response
         """
         if response.status_code == 401:
-            print(response.content)
-            print(response.request.url)
-            print(response.request.headers)
             msg = (
                 f"{response.status_code} Client Error: "
                 f"{response.reason} for path: {self.path}"
