@@ -313,7 +313,7 @@ class EmailResponseSummariesStream(EmarsysStream):
     parent_stream_type = EmailCampaignsStream
     ignore_parent_replication_keys = True
     path = "/email/{email_campaign_id}/responsesummary/"
-    primary_keys = ["email_campaign_id", "date"]
+    primary_keys = ["email_campaign_id"]
     replication_key = "date"
     next_page_token_jsonpath = None
     records_jsonpath = "$.data[*]"
