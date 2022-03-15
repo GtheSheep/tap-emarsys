@@ -95,6 +95,8 @@ class ContactFieldsStream(EmarsysStream):
     ignore_parent_replication_keys = True
     path = "/contact/getdata"
     primary_keys = ["contact_id", "field_id"]
+    state_partitioning_keys = ["contact_id", "field_id"]
+    replication_key = None
     next_page_token_jsonpath = None
     records_jsonpath = "$.data.result[*]"
 
@@ -313,7 +315,8 @@ class EmailResponseSummariesStream(EmarsysStream):
     parent_stream_type = EmailCampaignsStream
     ignore_parent_replication_keys = True
     path = "/email/{email_campaign_id}/responsesummary/"
-    primary_keys = ["email_campaign_id"]
+    primary_keys = ["email_campaign_id", "date"]
+    state_partitioning_keys = ["email_campaign_id"]
     replication_key = "date"
     next_page_token_jsonpath = None
     records_jsonpath = "$.data[*]"
